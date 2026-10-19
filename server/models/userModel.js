@@ -1,12 +1,12 @@
 
 const { database } = require("../config/mongodb");
-const { hashPassword } = require("../helpers/bcrypt");
+const { hashPassword, confirmPassword } = require("../helpers/bcrypt");
+
+const users = database.collection("User");
 
 class UserModel {
     static async register(userData) {
         const { name, username, email, password } = userData;
-
-        const users = database.collection("User");
 
         if (!username) {
             throw new Error("Username is required");
@@ -51,6 +51,37 @@ class UserModel {
             name: newUser.name,
             username: newUser.username,
             email: newUser.email
+        };
+    }
+
+    static async login(userData) {
+        const { username, password } = userData;
+
+        if (!username) {
+            throw new Error("Username is required");
+        }
+
+        if (!password) {
+            throw new Error("Password is required");
+        }
+
+        const user = await users.findOne({ username });
+
+        if (!user) {
+            throw new Error("Invalid username or password");
+        }
+
+        const isPasswordValid = confirmPassword(password, user.password)
+
+        if (!isPasswordValid) {
+            throw new Error("Invalid username or password");
+        }
+
+        return {
+            _id: user._id.toString(),
+            name: user.name,
+            username: user.username,
+            email: user.email,
         };
     }
 }

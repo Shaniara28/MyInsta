@@ -21,6 +21,11 @@ const typeDefs = `#graphql
             email: String!
             password: String!
         ): User!
+
+        login(
+            username: String!
+            password: String!
+        ): User!
     }
 `;
 
@@ -50,6 +55,17 @@ const resolvers = {
 
             return data;
         },
+
+        login: async (_, args) => {
+            const { username, password } = args;
+
+            const data = await UserModel.login({
+                username,
+                password,
+            });
+
+            return data;
+        }
     },
 };
 
