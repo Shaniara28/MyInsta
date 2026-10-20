@@ -35,7 +35,7 @@ class PostModel {
         ];
 
         const posts = await this.collection().aggregate(agg).toArray();
-        console.log(posts);
+
         return posts
     }
 }

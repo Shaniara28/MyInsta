@@ -12,6 +12,8 @@ const {
     typeDefs: postTypeDefs,
     resolvers: postResolvers
 } = require("./schemas/post");
+const { verifyToken } = require('./helpers/jwt');
+const UserModel = require('./models/userModel');
 
 const server = new ApolloServer({
     typeDefs: [userTypeDefs, postTypeDefs],
@@ -26,8 +28,40 @@ const server = new ApolloServer({
 async function runServer() {
     const { url } = await startStandaloneServer(server, {
         listen: { port: 3000 },
+
         context: ({ req }) => {
-            console.log("auth jalan");
+
+            return {
+                message: "Hello World",
+                auth: async () => {
+
+                    const { authorization } = req.headers;
+
+                    if (!authorization) {
+                        throw new Error("Please login first");
+                    }
+
+                    const [type, token] = authorization.split(" ");
+
+                    if (type !== "Bearer" || !token) {
+                        throw new Error("Invalid authorization header");
+                    }
+
+                    const payload = verifyToken(token);
+
+                    if (!payload) {
+                        throw new Error("Invalid token");
+                    }
+
+                    const user = await UserModel.findById(payload.id);
+
+                    if (!user) {
+                        throw new Error("User not found");
+                    }
+
+                    return user;
+                }
+            }
         }
     });
 

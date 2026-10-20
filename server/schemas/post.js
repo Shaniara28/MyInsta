@@ -35,7 +35,9 @@ const typeDefs = `#graphql
 
 const resolvers = {
   Query: {
-    getPosts: async () => {
+    getPosts: async (_, args, contextValue) => {
+      await contextValue.auth()
+
       const posts = await PostModel.getAll();
 
       return posts;
