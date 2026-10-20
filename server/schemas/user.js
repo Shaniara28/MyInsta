@@ -1,6 +1,7 @@
 
+const { confirmPassword } = require("../helpers/bcrypt");
+const { signToken } = require("../helpers/jwt");
 const UserModel = require("../models/userModel");
-const validator = require("email-validator");
 
 const typeDefs = `#graphql
     type User {
@@ -8,6 +9,11 @@ const typeDefs = `#graphql
         name: String
         username: String!
         email: String!
+    }
+
+    type LoginResponse{
+        token: String,
+        message: String
     }
 
     type Query {
@@ -25,7 +31,7 @@ const typeDefs = `#graphql
         login(
             username: String!
             password: String!
-        ): User!
+        ): LoginResponse
     }
 `;
 
@@ -40,15 +46,9 @@ const resolvers = {
         register: async (_, args) => {
             const { name, username, email, password } = args;
 
-            const isEmailValid = validator.validate(email);
-
-            if (!isEmailValid) {
-                throw new Error("Invalid email format");
-            }
-
             const data = await UserModel.register({
                 name,
-                username,
+                username: username.toLowerCase(),
                 email: email.toLowerCase(),
                 password,
             });
@@ -59,12 +59,34 @@ const resolvers = {
         login: async (_, args) => {
             const { username, password } = args;
 
-            const data = await UserModel.login({
-                username,
-                password,
-            });
+            if (!username || !password) {
+                throw new Error("Username & password is required");
+            }
 
-            return data;
+            const user = await UserModel.findByUsername(username.toLowerCase());
+
+            if (!user) {
+                throw new Error("Invalid username or password");
+            }
+
+            const isPasswordValid = confirmPassword(password, user.password)
+
+            if (!isPasswordValid) {
+                throw new Error("Invalid username or password");
+            }
+
+            const payload = {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }
+
+            const token = signToken(payload)
+
+            return {
+                token,
+                message: "Login Successfully"
+            }
         }
     },
 };
