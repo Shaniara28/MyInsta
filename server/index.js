@@ -6,11 +6,16 @@ const { startStandaloneServer } = require('@apollo/server/standalone');
 const {
     typeDefs: userTypeDefs,
     resolvers: userResolvers
-} = require("./schemas/user")
+} = require("./schemas/user");
+
+const {
+    typeDefs: postTypeDefs,
+    resolvers: postResolvers
+} = require("./schemas/post");
 
 const server = new ApolloServer({
-    typeDefs: [userTypeDefs],
-    resolvers: [userResolvers]
+    typeDefs: [userTypeDefs, postTypeDefs],
+    resolvers: [userResolvers, postResolvers]
 });
 
 // Passing an ApolloServer instance to the `startStandaloneServer` function:
