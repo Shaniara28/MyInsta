@@ -38,7 +38,6 @@ const typeDefs = `#graphql
       content: String!
       tags: [String]
       imgUrl: String
-      authorId: ID!
     ): Post!
   }
 `;
@@ -72,10 +71,12 @@ const resolvers = {
     addPost: async (_, args, contextValue) => {
       const user = await contextValue.auth()
 
-      const { content, tags, imgUrl, authorId } = args
+      let { content, tags, imgUrl, authorId } = args
 
-      console.log(user);
-      // const post = await PostModel.addPost()
+      authorId = user._id
+      const post = await PostModel.addPost(content, tags, imgUrl, authorId);
+
+      return post
     }
   }
 }

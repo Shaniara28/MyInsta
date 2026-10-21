@@ -78,8 +78,7 @@ class PostModel {
         return post[0];
     }
 
-    static async addPost(postData) {
-        const { content, tags, imgUrl, authorId } = postData;
+    static async addPost(content, tags, imgUrl, authorId) {
 
         if (!content) {
             throw new Error("Post content is required");
@@ -89,7 +88,7 @@ class PostModel {
             content,
             tags: tags || [],
             imgUrl,
-            authorId: new ObjectId(authorId),
+            authorId,
             comments: [],
             likes: [],
             createdAt: new Date(),
