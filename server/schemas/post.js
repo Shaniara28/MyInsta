@@ -44,6 +44,10 @@ const typeDefs = `#graphql
       postId: ID!
       content: String!
     ): Comment
+
+    addLike(
+      postId: ID!
+    ): Post!
   }
 `;
 
@@ -96,6 +100,19 @@ const resolvers = {
       });
 
       return comment
+    },
+
+    addLike: async (_, args, contextValue) => {
+      const user = await contextValue.auth();
+
+      const { postId } = args;
+
+      const post = await PostModel.addLike({
+        postId,
+        username: user.username,
+      });
+
+      return post;
     }
   }
 }

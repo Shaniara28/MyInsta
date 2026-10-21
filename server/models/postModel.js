@@ -134,6 +134,54 @@ class PostModel {
 
         return newComment;
     }
+
+
+    static async addLike(likeData) {
+        const { postId, username } = likeData;
+
+        const post = await this.getById(postId);
+
+        if (!post) {
+            throw new Error("Post not found");
+        }
+
+        const existingLike = post.likes?.find(
+            (like) => like.username === username
+        );
+
+        if (existingLike) {
+            await this.collection().updateOne(
+                { _id: new ObjectId(postId) },
+                {
+                    $pull: {
+                        likes: { username },
+                    },
+                    $set: {
+                        updatedAt: new Date(),
+                    },
+                }
+            );
+        } else {
+            await this.collection().updateOne(
+                { _id: new ObjectId(postId) },
+                {
+                    $push: {
+                        likes: {
+                            username,
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                        },
+                    },
+                    $set: {
+                        updatedAt: new Date(),
+                    },
+                }
+            );
+        }
+
+        return await this.getById(postId);;
+    }
+
 }
 
 module.exports = PostModel;
