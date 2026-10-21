@@ -84,7 +84,19 @@ const resolvers = {
       return post
     },
 
+    addComment: async (_, args, contextValue) => {
+      const user = await contextValue.auth();
 
+      const { postId, content } = args;
+
+      const comment = await PostModel.addComment({
+        postId,
+        content,
+        username: user.username,
+      });
+
+      return comment
+    }
   }
 }
 
