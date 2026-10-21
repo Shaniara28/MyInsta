@@ -99,6 +99,41 @@ class PostModel {
 
         return await this.getById(data.insertedId.toString());
     }
+
+    static async addComment(commentData) {
+        const { postId, content, username } = commentData;
+
+        if (!content || !content.trim()) {
+            throw new Error("Comment content is required");
+        }
+
+        const post = await this.getById(postId);
+
+        if (!post) {
+            throw new Error("Post not found");
+        }
+
+        const newComment = {
+            content,
+            username,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+
+        await this.collection().updateOne(
+            { _id: new ObjectId(postId) },
+            {
+                $push: {
+                    comments: newComment,
+                },
+                $set: {
+                    updatedAt: new Date(),
+                },
+            }
+        );
+
+        return newComment;
+    }
 }
 
 module.exports = PostModel;

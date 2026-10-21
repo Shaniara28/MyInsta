@@ -18,6 +18,7 @@ const typeDefs = `#graphql
 
     type Query {
         health: String
+        searchUser(input: String!): [User]
     }
 
     type Mutation {
@@ -40,6 +41,20 @@ const resolvers = {
         health: () => {
             return "Server is running";
         },
+
+        searchUser: async (_, args, contextValue) => {
+            await contextValue.auth()
+
+            const { input } = args;
+
+            if (!input || !input.trim()) {
+                throw new Error("Search keyword is required")
+            }
+
+            const users = await UserModel.search(input);
+
+            return users
+        }
     },
 
     Mutation: {

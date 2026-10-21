@@ -39,6 +39,11 @@ const typeDefs = `#graphql
       tags: [String]
       imgUrl: String
     ): Post!
+
+    addComment (
+      postId: ID!
+      content: String!
+    ): Comment
   }
 `;
 
@@ -77,7 +82,9 @@ const resolvers = {
       const post = await PostModel.addPost(content, tags, imgUrl, authorId);
 
       return post
-    }
+    },
+
+
   }
 }
 

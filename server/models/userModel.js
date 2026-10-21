@@ -63,6 +63,27 @@ class UserModel {
     static async findById(id) {
         return await this.collection().findOne({ _id: new ObjectId(id) })
     }
+
+    static async search(input) {
+        const keyword = input.trim()
+
+        const users = await this.collection().find(
+            {
+                username: {
+                    $regex: keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                    $options: "i",
+                }
+            },
+            {
+                projection: {
+                    password: 0,
+                    email: 0
+                },
+            }
+        ).toArray();
+
+        return users;
+    }
 }
 
 module.exports = UserModel;
