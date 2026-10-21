@@ -28,9 +28,19 @@ const typeDefs = `#graphql
       updatedAt: String
   }
 
-  extend type Query {
+  type Query {
         getPosts: [Post]
+        getPostById(id: ID!): Post
     }
+
+  type Mutation {
+    addPost(
+      content: String!
+      tags: [String]
+      imgUrl: String
+      authorId: ID!
+    ): Post!
+  }
 `;
 
 const resolvers = {
@@ -41,6 +51,31 @@ const resolvers = {
       const posts = await PostModel.getAll();
 
       return posts;
+    },
+
+    getPostById: async (_, args, contextValue) => {
+      await contextValue.auth()
+
+      const { id } = args;
+
+      if (!id) {
+        throw new Error("Post ID is required");
+      }
+
+      const post = await PostModel.getById(id);
+
+      return post;
+    },
+  },
+
+  Mutation: {
+    addPost: async (_, args, contextValue) => {
+      const user = await contextValue.auth()
+
+      const { content, tags, imgUrl, authorId } = args
+
+      console.log(user);
+      // const post = await PostModel.addPost()
     }
   }
 }
