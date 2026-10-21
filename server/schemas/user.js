@@ -2,6 +2,7 @@
 const { confirmPassword } = require("../helpers/bcrypt");
 const { signToken } = require("../helpers/jwt");
 const UserModel = require("../models/userModel");
+const FollowModel = require("../models/followModel");
 
 const typeDefs = `#graphql
     type User {
@@ -14,6 +15,11 @@ const typeDefs = `#graphql
     type LoginResponse{
         token: String,
         message: String
+    }
+
+    type FollowResponse {
+        message: String!
+        isFollowing: Boolean!
     }
 
     type Query {
@@ -33,6 +39,8 @@ const typeDefs = `#graphql
             username: String!
             password: String!
         ): LoginResponse
+
+        followUser(userId: ID!): FollowResponse!
     }
 `;
 
@@ -102,6 +110,24 @@ const resolvers = {
                 token,
                 message: "Login Successfully"
             }
+        },
+
+        followUser: async (_, args, contextValue) => {
+            const user = await contextValue.auth();
+
+            const { userId } = args;
+            const followerId = user._id || user.id;
+
+            if (!followerId) {
+                throw new Error("User ID not found");
+            }
+
+            const result = await FollowModel.toggleFollow({
+                followerId,
+                followingId: userId,
+            });
+
+            return result;
         }
     },
 };

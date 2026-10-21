@@ -84,6 +84,7 @@ class UserModel {
 
         return users;
     }
+
 }
 
 module.exports = UserModel;
