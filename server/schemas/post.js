@@ -11,6 +11,7 @@ const typeDefs = `#graphql
       author: User
       comments: [Comment]
       likes: [Like]
+      likeCount: Int!
       createdAt: String
       updatedAt: String
   }
@@ -114,7 +115,13 @@ const resolvers = {
 
       return post;
     }
-  }
+  },
+
+  Post: {
+    likeCount: (post) => {
+      return post.likes ? post.likes.length : 0;
+    }
+  },
 }
 
 module.exports = { typeDefs, resolvers }

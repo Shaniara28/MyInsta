@@ -5,13 +5,27 @@ const UserModel = require("../models/userModel");
 const FollowModel = require("../models/followModel");
 
 const typeDefs = `#graphql
+    
     type User {
         _id: ID!
         name: String
         username: String!
         email: String!
-        followers: [User!]!
-        following: [User!]!
+    }
+
+    type UserSearchResult {
+        _id: ID!
+        name: String
+        username: String!
+    }
+
+    type UserProfile {
+        _id: ID!
+        name: String
+        username: String!
+        email: String!
+        followers: [UserSearchResult!]!
+        following: [UserSearchResult!]!
     }
 
     type LoginResponse{
@@ -27,9 +41,9 @@ const typeDefs = `#graphql
     type Query {
         health: String
 
-        searchUser(input: String!): [User]
+        searchUser(input: String!): [UserSearchResult!]!
 
-        getUserById(id: ID!): User
+        getUserById(id: ID!): UserProfile
     }
 
     type Mutation {
@@ -139,7 +153,7 @@ const resolvers = {
             const user = await contextValue.auth();
 
             const { userId } = args;
-            const followerId = user._id || user.id;
+            const followerId = user._id;
 
             if (!followerId) {
                 throw new Error("User ID not found");

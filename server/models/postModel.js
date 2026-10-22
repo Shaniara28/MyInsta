@@ -41,6 +41,10 @@ class PostModel {
     }
 
     static async getById(id) {
+        if (!ObjectId.isValid(id)) {
+            throw new Error("Invalid post ID");
+        }
+
         const agg = [
             {
                 $match: {
@@ -69,14 +73,18 @@ class PostModel {
             },
         ];
 
-        const post = await this.collection().aggregate(agg).toArray();
+        const posts = await this.collection()
+            .aggregate(agg)
+            .toArray();
 
-        if (post.length === 0) {
+        if (posts.length === 0) {
             throw new Error("Post not found");
         }
 
-        return post[0];
+        return posts[0];
     }
+
+
 
     static async addPost(content, tags, imgUrl, authorId) {
 

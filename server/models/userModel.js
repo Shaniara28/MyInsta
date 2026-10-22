@@ -1,7 +1,7 @@
 
 const { ObjectId } = require("mongodb");
 const { database } = require("../config/mongodb");
-const { hashPassword, confirmPassword } = require("../helpers/bcrypt");
+const { hashPassword } = require("../helpers/bcrypt");
 const validator = require("email-validator");
 
 class UserModel {
@@ -132,10 +132,20 @@ class UserModel {
 
         const users = await this.collection().find(
             {
-                username: {
-                    $regex: keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-                    $options: "i",
-                }
+                $or: [
+                    {
+                        name: {
+                            $regex: keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                            $options: "i",
+                        }
+                    },
+                    {
+                        username: {
+                            $regex: keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                            $options: "i",
+                        }
+                    }
+                ]
             },
             {
                 projection: {
