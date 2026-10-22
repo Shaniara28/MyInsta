@@ -1,4 +1,6 @@
+const redis = require("../config/redis");
 const PostModel = require("../models/postModel");
+const REDIS_POSTS_KEY = "posts:all"
 
 const typeDefs = `#graphql
 
@@ -57,7 +59,14 @@ const resolvers = {
     getPosts: async (_, args, contextValue) => {
       await contextValue.auth()
 
+      const postsCache = await redis.get(REDIS_POSTS_KEY);
+
+      if (postsCache) {
+        return JSON.parse(postsCache);
+      }
+
       const posts = await PostModel.getAll();
+      await redis.set(REDIS_POSTS_KEY, JSON.stringify(posts));
 
       return posts;
     },
@@ -86,6 +95,9 @@ const resolvers = {
       authorId = user._id
       const post = await PostModel.addPost(content, tags, imgUrl, authorId);
 
+      // cache invalidataion
+      await redis.del(REDIS_POSTS_KEY);
+
       return post
     },
 
@@ -100,6 +112,8 @@ const resolvers = {
         username: user.username,
       });
 
+      await redis.del(REDIS_POSTS_KEY);
+
       return comment
     },
 
@@ -112,6 +126,8 @@ const resolvers = {
         postId,
         username: user.username,
       });
+
+      await redis.del(REDIS_POSTS_KEY);
 
       return post;
     }
