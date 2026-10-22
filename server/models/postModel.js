@@ -60,15 +60,32 @@ class PostModel {
                 },
             },
             {
-                $unwind: {
-                    path: "$author",
-                    preserveNullAndEmptyArrays: true,
+                $unwind: "$author",
+            },
+            {
+                $lookup: {
+                    from: "User",
+                    localField: "comments.username",
+                    foreignField: "username",
+                    as: "commentUsers",
+                },
+            },
+            {
+                $lookup: {
+                    from: "User",
+                    localField: "likes.username",
+                    foreignField: "username",
+                    as: "likeUsers",
                 },
             },
             {
                 $project: {
                     "author.password": 0,
                     "author.email": 0,
+                    "commentUsers.password": 0,
+                    "commentUsers.email": 0,
+                    "likeUsers.password": 0,
+                    "likeUsers.email": 0,
                 },
             },
         ];
@@ -83,8 +100,6 @@ class PostModel {
 
         return posts[0];
     }
-
-
 
     static async addPost(content, tags, imgUrl, authorId) {
 
