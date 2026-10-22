@@ -61,7 +61,70 @@ class UserModel {
     }
 
     static async findById(id) {
-        return await this.collection().findOne({ _id: new ObjectId(id) })
+        if (!ObjectId.isValid(id)) {
+            throw new Error("Invalid user ID");
+        }
+
+        const agg = [
+            {
+                $match: {
+                    _id: new ObjectId(id),
+                },
+            },
+            {
+                $lookup: {
+                    from: "Follow",
+                    localField: "_id",
+                    foreignField: "followingId",
+                    as: "followerRelations",
+                },
+            },
+            {
+                $lookup: {
+                    from: "User",
+                    localField: "followerRelations.followerId",
+                    foreignField: "_id",
+                    as: "followers",
+                },
+            },
+            {
+                $lookup: {
+                    from: "Follow",
+                    localField: "_id",
+                    foreignField: "followerId",
+                    as: "followingRelations",
+                },
+            },
+            {
+                $lookup: {
+                    from: "User",
+                    localField: "followingRelations.followingId",
+                    foreignField: "_id",
+                    as: "following",
+                },
+            },
+            {
+                $project: {
+                    password: 0,
+                    followerRelations: 0,
+                    followingRelations: 0,
+                    "followers.password": 0,
+                    "followers.email": 0,
+                    "following.password": 0,
+                    "following.email": 0,
+                },
+            },
+        ];
+
+        const users = await this.collection()
+            .aggregate(agg)
+            .toArray();
+
+        if (users.length === 0) {
+            throw new Error("User not found");
+        }
+
+        return users[0];
     }
 
     static async search(input) {
@@ -84,7 +147,6 @@ class UserModel {
 
         return users;
     }
-
 }
 
 module.exports = UserModel;

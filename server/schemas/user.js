@@ -10,6 +10,8 @@ const typeDefs = `#graphql
         name: String
         username: String!
         email: String!
+        followers: [User!]!
+        following: [User!]!
     }
 
     type LoginResponse{
@@ -24,7 +26,10 @@ const typeDefs = `#graphql
 
     type Query {
         health: String
+
         searchUser(input: String!): [User]
+
+        getUserById(id: ID!): User
     }
 
     type Mutation {
@@ -62,6 +67,24 @@ const resolvers = {
             const users = await UserModel.search(input);
 
             return users
+        },
+
+        getUserById: async (_, args, contextValue) => {
+            await contextValue.auth();
+
+            const { id } = args;
+
+            if (!id) {
+                throw new Error("User ID is required");
+            }
+
+            const user = await UserModel.findById(id);
+
+            if (!user) {
+                throw new Error("User not found");
+            }
+
+            return user;
         }
     },
 
