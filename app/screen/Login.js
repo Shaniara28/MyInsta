@@ -89,10 +89,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         paddingHorizontal: 28,
-        paddingTop: 100,
-        paddingBottom: 30,
     },
     formContainer: {
         width: '100%',
@@ -144,12 +142,13 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     registerContainer: {
-        flexDirection: 'row',
+        fflexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 18,
         borderTopWidth: 1,
         borderTopColor: '#EEEEEE',
+        marginTop: 35,
         paddingBottom: 50
     },
     registerText: {

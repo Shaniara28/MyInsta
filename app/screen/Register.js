@@ -26,18 +26,18 @@ export default function Register({ navigation }) {
         }
 
         if (password.length < 5) {
-            Alert.alert('Oops!', 'Password min 5 characters.');
+            Alert.alert('Oops!', 'Password must be at least 5 characters long.');
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Oops!', 'Password is not match.');
+            Alert.alert('Oops!', 'Password do not match.');
             return;
         }
 
         Alert.alert(
             'Register Success!',
-            'You are now have an account.',
+            'Your account has been created successfully. Please log in.',
             [
                 {
                     text: 'OK',
@@ -147,9 +147,9 @@ const styles = StyleSheet.create({
     },
     scrollContainer: {
         flexGrow: 1,
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         paddingHorizontal: 28,
-        paddingTop: 60,
+        paddingTop: 30,
         paddingBottom: 20,
     },
     formContainer: {
@@ -209,8 +209,7 @@ const styles = StyleSheet.create({
         paddingVertical: 18,
         borderTopWidth: 1,
         borderTopColor: '#EEEEEE',
-        marginTop: 30,
-        paddingBottom: 50
+        marginTop: 25,
     },
     loginText: {
         color: '#666666',
