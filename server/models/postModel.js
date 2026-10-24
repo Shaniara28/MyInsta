@@ -53,7 +53,7 @@ class PostModel {
             },
             {
                 $lookup: {
-                    from: "",
+                    from: "User",
                     localField: "authorId",
                     foreignField: "_id",
                     as: "author",
