@@ -12,7 +12,9 @@ export default function BottomNav() {
                 <Ionicons name="home" size={26} color="#222" />
             </TouchableOpacity>
 
-            <TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('Search')}
+            >
                 <Ionicons name="search-outline" size={26} color="#222" />
             </TouchableOpacity>
 
