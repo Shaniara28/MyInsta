@@ -93,7 +93,11 @@ export default function Home({ navigation }) {
                         />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() =>
+                            navigation.navigate('PostDetail', { post: item })
+                        }>
                         <Ionicons name="chatbubble-outline" size={25} color="#222" />
                     </TouchableOpacity>
 
@@ -115,7 +119,10 @@ export default function Home({ navigation }) {
                     {item.caption}
                 </Text>
 
-                <TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() =>
+                        navigation.navigate('PostDetail', { post: item })
+                    }>
                     <Text style={styles.viewComments}>View all comments</Text>
                 </TouchableOpacity>
             </View>

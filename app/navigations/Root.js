@@ -16,7 +16,7 @@ export default function RootStack() {
             <Stack.Screen name="Register" component={Register} options={{ headerShown: false }} />
             <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
             <Stack.Screen name="CreatePost" component={CreatePost} options={{ headerShown: false }} />
-            <Stack.Screen name="PostDetail" component={PostDetail} />
+            <Stack.Screen name="PostDetail" component={PostDetail} options={{ headerShown: false }} />
             <Stack.Screen name="Search" component={Seacrh} />
             <Stack.Screen name="Profile" component={Profile} />
         </Stack.Navigator>
