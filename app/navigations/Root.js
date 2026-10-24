@@ -12,8 +12,8 @@ const Stack = createNativeStackNavigator();
 export default function RootStack() {
     return (
         <Stack.Navigator>
-            <Stack.Screen name="Register" component={Register} />
             <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Register" component={Register} />
             <Stack.Screen name="Home" component={Home} />
             <Stack.Screen name="Create Post" component={CreatePost} />
             <Stack.Screen name="Post Detail" component={PostDetail} />
