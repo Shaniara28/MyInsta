@@ -1,10 +1,14 @@
+
 import { View, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 export default function BottomNav() {
+    const navigation = useNavigation();
+
     return (
         <View style={styles.bottomNavigation}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')}>
                 <Ionicons name="home" size={26} color="#222" />
             </TouchableOpacity>
 
@@ -12,8 +16,10 @@ export default function BottomNav() {
                 <Ionicons name="search-outline" size={26} color="#222" />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
-                <Ionicons name="add-circle-outline" size={27} color="#222" />
+            <TouchableOpacity
+                onPress={() => navigation.navigate('CreatePost')}
+            >
+                <Ionicons name="add-circle-outline" size={28} color="#222" />
             </TouchableOpacity>
 
             <TouchableOpacity>
@@ -27,7 +33,7 @@ export default function BottomNav() {
                 />
             </TouchableOpacity>
         </View>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
@@ -45,4 +51,4 @@ const styles = StyleSheet.create({
         height: 27,
         borderRadius: 14,
     },
-})
+});

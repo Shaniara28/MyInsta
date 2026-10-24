@@ -126,7 +126,7 @@ export default function Home({ navigation }) {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.logo}>MySocial</Text>
+                <Text style={styles.logo}>MyInsta</Text>
 
                 <View style={styles.headerActions}>
                     <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
