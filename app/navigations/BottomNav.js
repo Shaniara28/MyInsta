@@ -28,7 +28,9 @@ export default function BottomNav() {
                 <Ionicons name="heart-outline" size={26} color="#222" />
             </TouchableOpacity>
 
-            <TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('Profile')}
+            >
                 <Image
                     source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
                     style={styles.bottomProfile}
