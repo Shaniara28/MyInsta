@@ -1,6 +1,4 @@
-
-import { useState, useEffect } from 'react';
-
+import { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -10,81 +8,136 @@ import {
     StyleSheet,
     FlatList,
     Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNav from '../navigations/BottomNav';
+    ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { gql } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client/react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import BottomNav from "../navigations/BottomNav";
 
 const GET_POSTS = gql`
-    query GetPosts {
-        getPosts {
-            _id
-            content
-            tags
-            imgUrl
-            authorId
-            author {
-                _id
-                name
-                username
-            }
-            comments {
-                content
-                createdAt
-                updatedAt
-                username
-            }
-            likes {
-                createdAt
-                updatedAt
-                username
-            }
-            likeCount
-            createdAt
-            updatedAt
-        }
+  query GetPosts {
+    getPosts {
+      _id
+      content
+      tags
+      imgUrl
+      authorId
+      author {
+        _id
+        name
+        username
+      }
+      comments {
+        content
+        createdAt
+        updatedAt
+        username
+      }
+      likes {
+        createdAt
+        updatedAt
+        username
+      }
+      likeCount
+      createdAt
+      updatedAt
     }
+  }
+`;
+
+const ADD_LIKE = gql`
+  mutation AddLike($postId: ID!) {
+    addLike(postId: $postId) {
+      _id
+      likeCount
+      likes {
+        username
+        createdAt
+        updatedAt
+      }
+    }
+  }
 `;
 
 const stories = [
-    { id: '1', username: 'your_story', image: 'https://i.pravatar.cc/150?img=12' },
-    { id: '2', username: 'jessica', image: 'https://i.pravatar.cc/150?img=5' },
-    { id: '3', username: 'michael', image: 'https://i.pravatar.cc/150?img=11' },
-    { id: '4', username: 'sarah', image: 'https://i.pravatar.cc/150?img=9' },
-    { id: '5', username: 'david', image: 'https://i.pravatar.cc/150?img=13' },
+    {
+        id: "1",
+        username: "your_story",
+        image: "https://i.pravatar.cc/150?img=12",
+    },
+    {
+        id: "2",
+        username: "jessica",
+        image: "https://i.pravatar.cc/150?img=5",
+    },
+    {
+        id: "3",
+        username: "michael",
+        image: "https://i.pravatar.cc/150?img=11",
+    },
+    {
+        id: "4",
+        username: "sarah",
+        image: "https://i.pravatar.cc/150?img=9",
+    },
+    {
+        id: "5",
+        username: "david",
+        image: "https://i.pravatar.cc/150?img=13",
+    },
 ];
 
 export default function Home({ navigation }) {
-    const { loading, error, data } = useQuery(GET_POSTS);
+    const { loading, error, data, refetch } = useQuery(GET_POSTS);
 
     const [likedPosts, setLikedPosts] = useState({});
+    const [likingPostId, setLikingPostId] = useState(null);
+
+    const [addLike] = useMutation(ADD_LIKE, {
+        refetchQueries: [{ query: GET_POSTS }],
+        awaitRefetchQueries: true,
+        onError: (err) => {
+            Alert.alert("Failed", err.message || "Failed to like post.");
+        },
+    });
 
     const posts = data?.getPosts || [];
 
     useEffect(() => {
         if (error) {
             Alert.alert(
-                'Failed to Load Posts',
-                error.message || 'Something went wrong.'
+                "Failed to Load Posts",
+                error.message || "Something went wrong."
             );
         }
     }, [error]);
 
-    function handleLike(postId) {
-        setLikedPosts(current => ({
-            ...current,
-            [postId]: !current[postId],
-        }));
+    async function handleLike(postId) {
+        if (likingPostId) return;
+
+        try {
+            setLikingPostId(postId);
+
+            await addLike({
+                variables: { postId },
+            });
+
+            // Refresh posts so Home displays the latest backend data.
+            await refetch();
+        } catch (err) {
+            console.log("Like error:", err.message);
+        } finally {
+            setLikingPostId(null);
+        }
     }
 
     function renderPost({ item }) {
         const postId = item._id;
-        const username = item.author?.username || 'Unknown user';
+        const username = item.author?.username || "Unknown user";
         const isLiked = !!likedPosts[postId];
         const totalLikes = item.likeCount ?? item.likes?.length ?? 0;
-        const displayedLikes = totalLikes + (isLiked ? 1 : 0);
 
         return (
             <View style={styles.post}>
@@ -92,7 +145,7 @@ export default function Home({ navigation }) {
                 <View style={styles.postHeader}>
                     <Image
                         source={{
-                            uri: 'https://pub-dc9a9c6ac2a64ba48bce426ced0ac56a.r2.dev/idols/Yoona/_live/profile_1791804111876_ae796670-e03d-45b9-ad7f-7cbea5a522b5.jpg',
+                            uri: "https://pub-dc9a9c6ac2a64ba48bce426ced0ac56a.r2.dev/idols/Yoona/_live/profile_1791804111876_ae796670-e03d-45b9-ad7f-7cbea5a522b5.jpg",
                         }}
                         style={styles.profileImage}
                     />
@@ -110,41 +163,68 @@ export default function Home({ navigation }) {
 
                 {/* Post Image */}
                 {item.imgUrl ? (
-                    <Image
-                        source={{ uri: item.imgUrl }}
-                        style={styles.postImage}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <View style={[styles.postImage, styles.noImage]}>
-                        <Ionicons
-                            name="image-outline"
-                            size={45}
-                            color="#888"
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        onPress={() =>
+                            navigation.navigate("PostDetail", {
+                                post: item,
+                                id: postId,
+                            })
+                        }
+                    >
+                        <Image
+                            source={{ uri: item.imgUrl }}
+                            style={styles.postImage}
+                            resizeMode="cover"
                         />
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        onPress={() =>
+                            navigation.navigate("PostDetail", {
+                                post: item,
+                                id: postId,
+                            })
+                        }
+                    >
+                        <View style={[styles.postImage, styles.noImage]}>
+                            <Ionicons
+                                name="image-outline"
+                                size={45}
+                                color="#888"
+                            />
 
-                        <Text style={styles.noImageText}>
-                            No image available
-                        </Text>
-                    </View>
+                            <Text style={styles.noImageText}>
+                                No image available
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                 )}
 
                 {/* Post Actions */}
                 <View style={styles.postActions}>
-                    <TouchableOpacity onPress={() => handleLike(postId)}>
-                        <Ionicons
-                            name={isLiked ? 'heart' : 'heart-outline'}
-                            size={27}
-                            color={isLiked ? '#E63946' : '#222'}
-                        />
+                    <TouchableOpacity
+                        onPress={() => handleLike(postId)}
+                        disabled={likingPostId === postId}
+                    >
+                        {likingPostId === postId ? (
+                            <ActivityIndicator size="small" color="#E63946" />
+                        ) : (
+                            <Ionicons
+                                name={isLiked ? "heart" : "heart-outline"}
+                                size={27}
+                                color={isLiked ? "#E63946" : "#222"}
+                            />
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() =>
-                            navigation.navigate('PostDetail', {
+                            navigation.navigate("PostDetail", {
                                 post: item,
-                                id: item._id,
+                                id: postId,
                             })
                         }
                     >
@@ -175,9 +255,7 @@ export default function Home({ navigation }) {
                 </View>
 
                 {/* Likes */}
-                <Text style={styles.likes}>
-                    {displayedLikes} likes
-                </Text>
+                <Text style={styles.likes}>{totalLikes} likes</Text>
 
                 {/* Caption */}
                 <Text style={styles.caption}>
@@ -185,11 +263,18 @@ export default function Home({ navigation }) {
                     {item.content}
                 </Text>
 
+                {/* Tags */}
+                {item.tags?.length > 0 && (
+                    <Text style={styles.tags}>
+                        {item.tags.map((tag) => `#${tag}`).join(" ")}
+                    </Text>
+                )}
+
                 {/* Comments */}
                 <TouchableOpacity
                     onPress={() =>
-                        navigation.navigate('PostDetail', {
-                            id: item._id,
+                        navigation.navigate("PostDetail", {
+                            id: postId,
                             post: item,
                         })
                     }
@@ -203,14 +288,14 @@ export default function Home({ navigation }) {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['bottom']}>
+        <SafeAreaView style={styles.container} edges={["bottom"]}>
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.logo}>MyInsta</Text>
 
                 <View style={styles.headerActions}>
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('CreatePost')}
+                        onPress={() => navigation.navigate("CreatePost")}
                     >
                         <Ionicons
                             name="add-circle-outline"
@@ -243,7 +328,7 @@ export default function Home({ navigation }) {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                 >
-                    {stories.map(story => (
+                    {stories.map((story) => (
                         <TouchableOpacity
                             key={story.id}
                             style={styles.story}
@@ -269,9 +354,7 @@ export default function Home({ navigation }) {
             {/* Loading */}
             {loading && (
                 <View style={styles.messageContainer}>
-                    <Text style={styles.messageText}>
-                        Loading posts...
-                    </Text>
+                    <Text style={styles.messageText}>Loading posts...</Text>
                 </View>
             )}
 
@@ -280,8 +363,10 @@ export default function Home({ navigation }) {
                 <FlatList
                     data={posts}
                     renderItem={renderPost}
-                    keyExtractor={item => item._id.toString()}
+                    keyExtractor={(item) => item._id.toString()}
                     showsVerticalScrollIndicator={false}
+                    onRefresh={refetch}
+                    refreshing={loading}
                     ListEmptyComponent={
                         <View style={styles.messageContainer}>
                             <Text style={styles.messageText}>
@@ -301,26 +386,26 @@ export default function Home({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: "#FFFFFF",
         paddingTop: 40,
     },
     header: {
         height: 60,
         paddingHorizontal: 18,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
         borderBottomWidth: 0.5,
-        borderBottomColor: '#DDDDDD',
+        borderBottomColor: "#DDDDDD",
     },
     logo: {
         fontSize: 25,
-        fontWeight: 'bold',
-        color: '#262626',
+        fontWeight: "bold",
+        color: "#262626",
     },
     headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
     },
     headerIcon: {
         marginHorizontal: 16,
@@ -328,11 +413,11 @@ const styles = StyleSheet.create({
     storiesContainer: {
         paddingVertical: 12,
         borderBottomWidth: 0.5,
-        borderBottomColor: '#DDDDDD',
+        borderBottomColor: "#DDDDDD",
     },
     story: {
         width: 76,
-        alignItems: 'center',
+        alignItems: "center",
         marginHorizontal: 5,
     },
     storyBorder: {
@@ -340,17 +425,17 @@ const styles = StyleSheet.create({
         height: 62,
         borderRadius: 31,
         borderWidth: 2,
-        borderColor: '#E1306C',
+        borderColor: "#E1306C",
         padding: 3,
     },
     storyImage: {
-        width: '100%',
-        height: '100%',
+        width: "100%",
+        height: "100%",
         borderRadius: 30,
     },
     storyUsername: {
         fontSize: 11,
-        color: '#333333',
+        color: "#333333",
         marginTop: 5,
     },
     post: {
@@ -359,8 +444,8 @@ const styles = StyleSheet.create({
     postHeader: {
         height: 55,
         paddingHorizontal: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
     },
     profileImage: {
         width: 35,
@@ -369,29 +454,29 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     username: {
-        fontWeight: 'bold',
-        color: '#262626',
+        fontWeight: "bold",
+        color: "#262626",
     },
     moreButton: {
-        marginLeft: 'auto',
+        marginLeft: "auto",
         padding: 5,
     },
     postImage: {
-        width: '100%',
+        width: "100%",
         height: 350,
-        backgroundColor: '#EEEEEE',
+        backgroundColor: "#EEEEEE",
     },
     noImage: {
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     noImageText: {
         marginTop: 5,
-        color: '#888888',
+        color: "#888888",
     },
     postActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 12,
         paddingTop: 10,
     },
@@ -402,29 +487,34 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     likes: {
-        fontWeight: 'bold',
+        fontWeight: "bold",
         marginHorizontal: 12,
         marginTop: 8,
-        color: '#262626',
+        color: "#262626",
     },
     caption: {
         marginHorizontal: 12,
         marginTop: 5,
-        color: '#262626',
+        color: "#262626",
+    },
+    tags: {
+        marginHorizontal: 12,
+        marginTop: 5,
+        color: "#3797EF",
     },
     viewComments: {
         marginHorizontal: 12,
         marginTop: 5,
-        color: '#888888',
+        color: "#888888",
         fontSize: 13,
     },
     messageContainer: {
-        alignItems: 'center',
+        alignItems: "center",
         padding: 20,
     },
     messageText: {
-        color: '#666666',
-        textAlign: 'center',
+        color: "#666666",
+        textAlign: "center",
         marginTop: 5,
     },
 });

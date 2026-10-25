@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { gql } from "@apollo/client";
 import { useLazyQuery } from "@apollo/client/react";
 import BottomNav from "../navigations/BottomNav";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SEARCH_USER = gql`
     query SearchUser($input: String!) {
@@ -167,7 +168,7 @@ export default function Search({ navigation }) {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['bottom']}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>
                     Explore
@@ -210,7 +211,7 @@ export default function Search({ navigation }) {
             </View>
 
             <BottomNav />
-        </View>
+        </SafeAreaView>
     );
 }
 
