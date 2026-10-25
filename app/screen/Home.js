@@ -10,7 +10,41 @@ import {
     FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import BottomNav from '../navigations/BottomNav';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const GET_POSTS = gql`
+    query GetPosts {
+        getPosts {
+            _id
+            content
+            tags
+            imgUrl
+            authorId
+            author {
+                _id
+                name
+                username
+            }
+            comments {
+                content
+                createdAt
+                updatedAt
+                username
+            }
+            likes {
+                createdAt
+                updatedAt
+                username
+            }
+            likeCount
+            createdAt
+            updatedAt
+        }
+    }
+`;
 
 const stories = [
     { id: '1', username: 'your_story', image: 'https://i.pravatar.cc/150?img=12' },
@@ -20,141 +54,186 @@ const stories = [
     { id: '5', username: 'david', image: 'https://i.pravatar.cc/150?img=13' },
 ];
 
-const initialPosts = [
-    {
-        id: '1',
-        username: 'jessica',
-        profileImage: 'https://i.pravatar.cc/150?img=5',
-        postImage: 'https://picsum.photos/id/1011/600/600',
-        caption: 'Enjoying the beautiful view today! 🌿',
-        likes: 120,
-        isLiked: false,
-    },
-    {
-        id: '2',
-        username: 'michael',
-        profileImage: 'https://i.pravatar.cc/150?img=11',
-        postImage: 'https://picsum.photos/id/1015/600/600',
-        caption: 'Adventure is always a good idea. 🏔️',
-        likes: 85,
-        isLiked: false,
-    },
-];
-
 export default function Home({ navigation }) {
-    const [posts, setPosts] = useState(initialPosts);
+    const { loading, error, data } = useQuery(GET_POSTS);
+
+    const [likedPosts, setLikedPosts] = useState({});
+
+    const posts = data?.getPosts || [];
 
     function handleLike(postId) {
-        setPosts(currentPosts =>
-            currentPosts.map(post => {
-                if (post.id === postId) {
-                    return {
-                        ...post,
-                        isLiked: !post.isLiked,
-                        likes: post.isLiked
-                            ? post.likes - 1
-                            : post.likes + 1,
-                    };
-                }
-
-                return post;
-            })
-        );
+        setLikedPosts(current => ({
+            ...current,
+            [postId]: !current[postId],
+        }));
     }
 
     function renderPost({ item }) {
+        const postId = item._id;
+        const username = item.author?.username || 'Unknown user';
+        const isLiked = !!likedPosts[postId];
+        const totalLikes = item.likeCount ?? item.likes?.length ?? 0;
+        const displayedLikes = totalLikes + (isLiked ? 1 : 0);
+
         return (
             <View style={styles.post}>
+                {/* Post Header */}
                 <View style={styles.postHeader}>
                     <Image
-                        source={{ uri: item.profileImage }}
+                        source={{
+                            uri: 'https://i.pravatar.cc/150?img=12',
+                        }}
                         style={styles.profileImage}
                     />
 
-                    <Text style={styles.username}>{item.username}</Text>
+                    <Text style={styles.username}>{username}</Text>
 
                     <TouchableOpacity style={styles.moreButton}>
-                        <Ionicons name="ellipsis-horizontal" size={22} color="#222" />
+                        <Ionicons
+                            name="ellipsis-horizontal"
+                            size={22}
+                            color="#222"
+                        />
                     </TouchableOpacity>
                 </View>
 
-                <Image
-                    source={{ uri: item.postImage }}
-                    style={styles.postImage}
-                    resizeMode="cover"
-                />
-
-                <View style={styles.postActions}>
-                    <TouchableOpacity onPress={() => handleLike(item.id)}>
+                {/* Post Image */}
+                {item.imgUrl ? (
+                    <Image
+                        source={{ uri: item.imgUrl }}
+                        style={styles.postImage}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={[styles.postImage, styles.noImage]}>
                         <Ionicons
-                            name={item.isLiked ? 'heart' : 'heart-outline'}
+                            name="image-outline"
+                            size={45}
+                            color="#888"
+                        />
+                        <Text style={styles.noImageText}>
+                            No image available
+                        </Text>
+                    </View>
+                )}
+
+                {/* Post Actions */}
+                <View style={styles.postActions}>
+                    <TouchableOpacity onPress={() => handleLike(postId)}>
+                        <Ionicons
+                            name={isLiked ? 'heart' : 'heart-outline'}
                             size={27}
-                            color={item.isLiked ? '#E63946' : '#222'}
+                            color={isLiked ? '#E63946' : '#222'}
                         />
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() =>
-                            navigation.navigate('PostDetail', { post: item })
-                        }>
-                        <Ionicons name="chatbubble-outline" size={25} color="#222" />
+                            navigation.navigate('PostDetail', {
+                                post: item,
+                            })
+                        }
+                    >
+                        <Ionicons
+                            name="chatbubble-outline"
+                            size={25}
+                            color="#222"
+                        />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="paper-plane-outline" size={25} color="#222" />
+                        <Ionicons
+                            name="paper-plane-outline"
+                            size={25}
+                            color="#222"
+                        />
                     </TouchableOpacity>
 
                     <View style={styles.spacer} />
 
                     <TouchableOpacity>
-                        <Ionicons name="bookmark-outline" size={25} color="#222" />
+                        <Ionicons
+                            name="bookmark-outline"
+                            size={25}
+                            color="#222"
+                        />
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.likes}>{item.likes} likes</Text>
-
-                <Text style={styles.caption}>
-                    <Text style={styles.username}>{item.username} </Text>
-                    {item.caption}
+                {/* Likes */}
+                <Text style={styles.likes}>
+                    {displayedLikes} likes
                 </Text>
 
+                {/* Caption */}
+                <Text style={styles.caption}>
+                    <Text style={styles.username}>{username} </Text>
+                    {item.content}
+                </Text>
+
+                {/* Comments */}
                 <TouchableOpacity
                     onPress={() =>
-                        navigation.navigate('PostDetail', { post: item })
-                    }>
-                    <Text style={styles.viewComments}>View all comments</Text>
+                        navigation.navigate('PostDetail', {
+                            post: item,
+                        })
+                    }
+                >
+                    <Text style={styles.viewComments}>
+                        View all comments ({item.comments?.length || 0})
+                    </Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['bottom']}>
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.logo}>MyInsta</Text>
 
                 <View style={styles.headerActions}>
-                    <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
-                        <Ionicons name="add-circle-outline" size={28} color="#222" />
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('CreatePost')}
+                    >
+                        <Ionicons
+                            name="add-circle-outline"
+                            size={28}
+                            color="#222"
+                        />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.headerIcon}>
-                        <Ionicons name="heart-outline" size={27} color="#222" />
+                        <Ionicons
+                            name="heart-outline"
+                            size={27}
+                            color="#222"
+                        />
                     </TouchableOpacity>
 
                     <TouchableOpacity>
-                        <Ionicons name="paper-plane-outline" size={26} color="#222" />
+                        <Ionicons
+                            name="paper-plane-outline"
+                            size={26}
+                            color="#222"
+                        />
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* Stories */}
             <View style={styles.storiesContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                >
                     {stories.map(story => (
-                        <TouchableOpacity key={story.id} style={styles.story}>
+                        <TouchableOpacity
+                            key={story.id}
+                            style={styles.story}
+                        >
                             <View style={styles.storyBorder}>
                                 <Image
                                     source={{ uri: story.image }}
@@ -162,7 +241,10 @@ export default function Home({ navigation }) {
                                 />
                             </View>
 
-                            <Text style={styles.storyUsername} numberOfLines={1}>
+                            <Text
+                                style={styles.storyUsername}
+                                numberOfLines={1}
+                            >
                                 {story.username}
                             </Text>
                         </TouchableOpacity>
@@ -170,17 +252,47 @@ export default function Home({ navigation }) {
                 </ScrollView>
             </View>
 
-            {/* Feed */}
-            <FlatList
-                data={posts}
-                renderItem={renderPost}
-                keyExtractor={item => item.id}
-                showsVerticalScrollIndicator={false}
-            />
+            {/* Loading */}
+            {loading && (
+                <View style={styles.messageContainer}>
+                    <Text style={styles.messageText}>
+                        Loading posts...
+                    </Text>
+                </View>
+            )}
+
+            {/* Error */}
+            {error && (
+                <View style={styles.messageContainer}>
+                    <Text style={styles.errorText}>
+                        Failed to load posts.
+                    </Text>
+                    <Text style={styles.messageText}>
+                        {error.message}
+                    </Text>
+                </View>
+            )}
+
+            {/* Posts from MongoDB */}
+            {!loading && !error && (
+                <FlatList
+                    data={posts}
+                    renderItem={renderPost}
+                    keyExtractor={item => item._id.toString()}
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={
+                        <View style={styles.messageContainer}>
+                            <Text style={styles.messageText}>
+                                No posts available.
+                            </Text>
+                        </View>
+                    }
+                />
+            )}
 
             {/* Bottom Navigation */}
             <BottomNav />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -188,7 +300,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
-        paddingVertical: 40
+        paddingTop: 40,
     },
     header: {
         height: 60,
@@ -267,6 +379,14 @@ const styles = StyleSheet.create({
         height: 350,
         backgroundColor: '#EEEEEE',
     },
+    noImage: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noImageText: {
+        marginTop: 5,
+        color: '#888888',
+    },
     postActions: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -295,5 +415,18 @@ const styles = StyleSheet.create({
         marginTop: 5,
         color: '#888888',
         fontSize: 13,
-    }
+    },
+    messageContainer: {
+        alignItems: 'center',
+        padding: 20,
+    },
+    messageText: {
+        color: '#666666',
+        textAlign: 'center',
+        marginTop: 5,
+    },
+    errorText: {
+        color: '#E63946',
+        fontWeight: 'bold',
+    },
 });
