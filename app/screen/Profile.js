@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from '../navigations/BottomNav';
+import { useAuth } from '../context/AuthContext';
 
 const initialPosts = [
     {
@@ -45,6 +46,8 @@ const initialPosts = [
 export default function Profile({ navigation }) {
     const [posts] = useState(initialPosts);
 
+    const { signOut } = useAuth();
+
     const username = 'Shaniara28';
     const fullName = 'Shania Risky Agustin';
     const bio = 'Sharing my moments ✨\nWelcome to my profile!';
@@ -59,8 +62,28 @@ export default function Profile({ navigation }) {
     function handleSettings() {
         Alert.alert(
             'Settings',
-            'The settings feature is coming soon.'
+            'Choose an option',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: handleLogout,
+                },
+            ]
         );
+    }
+
+    async function handleLogout() {
+        try {
+            await signOut();
+            navigation.replace('Login');
+        } catch (error) {
+            Alert.alert('Logout Failed', error.message);
+        }
     }
 
     function openPost(item) {

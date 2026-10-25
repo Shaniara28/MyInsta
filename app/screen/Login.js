@@ -10,20 +10,70 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
+    ActivityIndicator
 } from 'react-native';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
+import { useAuth } from '../context/AuthContext';
+
+const LOGIN = gql`
+    mutation Login($username: String!, $password: String!) {
+        login(username: $username, password: $password) {
+            token
+            message
+        }
+    }
+`;
 
 export default function Login({ navigation }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    function handleLogin() {
-        if (!username || !password) {
-            Alert.alert('Oops!', 'Username and password is required!');
+    const { signIn } = useAuth();
+
+    const [login] = useMutation(LOGIN);
+
+    async function handleLogin() {
+        if (!username.trim() || !password) {
+            Alert.alert(
+                'Oops!',
+                'Username and password are required!'
+            );
             return;
         }
 
-        navigation.navigate('Home');
+        try {
+            setLoading(true);
+
+            const { data } = await login({
+                variables: {
+                    username: username.trim(),
+                    password,
+                },
+            });
+
+            const token = data?.login?.token;
+
+            if (!token) {
+                Alert.alert('Login Failed', 'Token was not received.');
+                return;
+            }
+
+            await signIn(token);
+
+            navigation.replace('Home');
+
+        } catch (error) {
+            Alert.alert(
+                'Login Failed',
+                error.message || 'Something went wrong. Please try again.'
+            );
+        } finally {
+            setLoading(false);
+        }
     }
+
 
     return (
         <KeyboardAvoidingView
@@ -59,10 +109,14 @@ export default function Login({ navigation }) {
                 <TouchableOpacity
                     style={styles.loginButton}
                     onPress={handleLogin}
+                    disabled={loading}
                 >
-                    <Text style={styles.loginButtonText}>Log In</Text>
+                    {loading ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.loginButtonText}>Log In</Text>
+                    )}
                 </TouchableOpacity>
-
             </View>
 
             <View style={styles.registerContainer}>
@@ -71,14 +125,9 @@ export default function Login({ navigation }) {
                 </Text>
 
                 <TouchableOpacity
-                    onPress={() =>
-                        Alert.alert(
-                            'Register',
-                            'Register screen akan kita buat berikutnya.'
-                        )
-                    }
+                    onPress={() => navigation.navigate('Register')}
                 >
-                    <Link screen="Register" style={styles.registerLink}> Sign up</Link>
+                    <Text style={styles.registerLink}> Sign up</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -142,14 +191,14 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     registerContainer: {
-        fflexDirection: 'row',
+        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 18,
         borderTopWidth: 1,
         borderTopColor: '#EEEEEE',
         marginTop: 35,
-        paddingBottom: 50
+        paddingBottom: 50,
     },
     registerText: {
         color: '#666666',

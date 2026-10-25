@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
 import {
     View,
     Text,
@@ -8,12 +9,15 @@ import {
     TouchableOpacity,
     StyleSheet,
     FlatList,
+    Alert,
 } from 'react-native';
+
 import { Ionicons } from '@expo/vector-icons';
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
-import BottomNav from '../navigations/BottomNav';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import BottomNav from '../navigations/BottomNav';
 
 const GET_POSTS = gql`
     query GetPosts {
@@ -60,6 +64,15 @@ export default function Home({ navigation }) {
     const [likedPosts, setLikedPosts] = useState({});
 
     const posts = data?.getPosts || [];
+
+    useEffect(() => {
+        if (error) {
+            Alert.alert(
+                'Failed to Load Posts',
+                error.message || 'Something went wrong.'
+            );
+        }
+    }, [error]);
 
     function handleLike(postId) {
         setLikedPosts(current => ({
@@ -111,6 +124,7 @@ export default function Home({ navigation }) {
                             size={45}
                             color="#888"
                         />
+
                         <Text style={styles.noImageText}>
                             No image available
                         </Text>
@@ -261,19 +275,7 @@ export default function Home({ navigation }) {
                 </View>
             )}
 
-            {/* Error */}
-            {error && (
-                <View style={styles.messageContainer}>
-                    <Text style={styles.errorText}>
-                        Failed to load posts.
-                    </Text>
-                    <Text style={styles.messageText}>
-                        {error.message}
-                    </Text>
-                </View>
-            )}
-
-            {/* Posts from MongoDB */}
+            {/* Posts */}
             {!loading && !error && (
                 <FlatList
                     data={posts}
@@ -424,9 +426,5 @@ const styles = StyleSheet.create({
         color: '#666666',
         textAlign: 'center',
         marginTop: 5,
-    },
-    errorText: {
-        color: '#E63946',
-        fontWeight: 'bold',
     },
 });
