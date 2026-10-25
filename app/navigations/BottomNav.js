@@ -32,7 +32,7 @@ export default function BottomNav() {
                 onPress={() => navigation.navigate('Profile')}
             >
                 <Image
-                    source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
+                    source={{ uri: 'https://pub-dc9a9c6ac2a64ba48bce426ced0ac56a.r2.dev/idols/Yoona/_live/profile_1791804111876_ae796670-e03d-45b9-ad7f-7cbea5a522b5.jpg' }}
                     style={styles.bottomProfile}
                 />
             </TouchableOpacity>

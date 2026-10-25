@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -8,86 +8,169 @@ import {
     FlatList,
     StyleSheet,
     Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import BottomNav from '../navigations/BottomNav';
-import { useAuth } from '../context/AuthContext';
+    ActivityIndicator,
+    Modal,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { gql } from "@apollo/client";
+import { useQuery } from "@apollo/client/react";
+import * as SecureStore from "expo-secure-store";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomNav from "../navigations/BottomNav";
+import { useAuth } from "../context/AuthContext";
 
-const initialPosts = [
-    {
-        id: '1',
-        username: 'Shania',
-        profileImage: 'https://i.pravatar.cc/150?img=12',
-        postImage: 'https://picsum.photos/id/1011/600/600',
-        caption: 'Enjoying the beautiful view! 🌿',
-        likes: 24,
-        isLiked: false,
-    },
-    {
-        id: '2',
-        username: 'Bintang',
-        profileImage: 'https://i.pravatar.cc/150?img=12',
-        postImage: 'https://picsum.photos/id/1015/600/600',
-        caption: 'A little adventure. 🏔️',
-        likes: 35,
-        isLiked: false,
-    },
-    {
-        id: '3',
-        username: 'Rafi',
-        profileImage: 'https://i.pravatar.cc/150?img=12',
-        postImage: 'https://picsum.photos/id/1016/600/600',
-        caption: 'Beautiful nature.',
-        likes: 18,
-        isLiked: false,
-    },
-];
+// Mengambil profil pengguna beserta followers dan following
+const GET_USER_BY_ID = gql`
+    query GetUserById($id: ID!) {
+        getUserById(id: $id) {
+            _id
+            name
+            username
+            email
+            followers {
+                _id
+                name
+                username
+            }
+            following {
+                _id
+                name
+                username
+            }
+        }
+    }
+`;
+
+// Mengambil postingan
+const GET_POSTS = gql`
+    query GetPosts {
+        getPosts {
+            _id
+            content
+            tags
+            imgUrl
+            authorId
+            author {
+                _id
+                name
+                username
+            }
+            likeCount
+            createdAt
+            comments {
+                content
+                username
+                createdAt
+            }
+        }
+    }
+`;
+
+function getUserIdFromToken(token) {
+    try {
+        if (!token) return null;
+
+        const payload = token.split(".")[1];
+        const base64 = payload
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+
+        const decoded = JSON.parse(atob(base64));
+        return decoded.id;
+    } catch (error) {
+        console.log("Failed to read user ID from token:", error);
+        return null;
+    }
+}
 
 export default function Profile({ navigation }) {
-    const [posts] = useState(initialPosts);
+    const { token, signOut } = useAuth();
 
-    const { signOut } = useAuth();
+    const [listVisible, setListVisible] = useState(false);
+    const [listType, setListType] = useState("followers");
 
-    const username = 'Shaniara28';
-    const fullName = 'Shania Risky Agustin';
-    const bio = 'Sharing my moments ✨\nWelcome to my profile!';
+    const userId = getUserIdFromToken(token);
 
-    function handleEditProfile() {
-        Alert.alert(
-            'Edit Profile',
-            'The edit profile feature is coming soon.'
-        );
-    }
+    const {
+        data: userData,
+        loading: userLoading,
+        error: userError,
+    } = useQuery(GET_USER_BY_ID, {
+        variables: { id: userId },
+        skip: !userId,
+        fetchPolicy: "network-only",
+    });
 
-    function handleSettings() {
-        Alert.alert(
-            'Settings',
-            'Choose an option',
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Logout',
-                    style: 'destructive',
-                    onPress: handleLogout,
-                },
-            ]
-        );
-    }
+    const {
+        data: postsData,
+        loading: postsLoading,
+        error: postsError,
+    } = useQuery(GET_POSTS, {
+        skip: !userId,
+        fetchPolicy: "network-only",
+    });
+
+    const user = userData?.getUserById;
+    const allPosts = postsData?.getPosts || [];
+
+    const posts = allPosts.filter(
+        (post) => String(post.authorId) === String(user?._id)
+    );
+
+    const followers = user?.followers || [];
+    const following = user?.following || [];
+
+    useEffect(() => {
+        if (userError) {
+            Alert.alert("Failed to Load Profile", userError.message);
+        }
+    }, [userError]);
+
+    useEffect(() => {
+        if (postsError) {
+            Alert.alert("Failed to Load Posts", postsError.message);
+        }
+    }, [postsError]);
 
     async function handleLogout() {
         try {
             await signOut();
-            navigation.replace('Login');
         } catch (error) {
-            Alert.alert('Logout Failed', error.message);
+            Alert.alert("Logout Failed", error.message);
         }
     }
 
+    function handleSettings() {
+        Alert.alert("Settings", "Choose an option", [
+            {
+                text: "Cancel",
+                style: "cancel",
+            },
+            {
+                text: "Logout",
+                style: "destructive",
+                onPress: handleLogout,
+            },
+        ]);
+    }
+
+    function handleEditProfile() {
+        Alert.alert(
+            "Edit Profile",
+            "The edit profile feature is coming soon."
+        );
+    }
+
+    function openUserList(type) {
+        setListType(type);
+        setListVisible(true);
+    }
+
     function openPost(item) {
-        navigation.navigate('PostDetail', { post: item });
+        navigation.navigate("PostDetail", {
+            id: item._id,
+            post: item,
+        });
     }
 
     function renderPost({ item }) {
@@ -97,22 +180,96 @@ export default function Profile({ navigation }) {
                 onPress={() => openPost(item)}
                 activeOpacity={0.8}
             >
-                <Image
-                    source={{
-                        uri: item.postImage || item.imgUrl,
-                    }}
-                    style={styles.gridImage}
-                    resizeMode="cover"
-                />
+                {item.imgUrl ? (
+                    <Image
+                        source={{ uri: item.imgUrl }}
+                        style={styles.gridImage}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={styles.postPlaceholder}>
+                        <Ionicons
+                            name="image-outline"
+                            size={30}
+                            color="#888888"
+                        />
+                    </View>
+                )}
             </TouchableOpacity>
         );
     }
 
+    function renderUser({ item }) {
+        return (
+            <TouchableOpacity
+                style={styles.userItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                    setListVisible(false);
+                }}
+            >
+                <Image
+                    source={{
+                        uri: `https://i.pravatar.cc/150?u=${item._id}`,
+                    }}
+                    style={styles.userAvatar}
+                />
+
+                <View style={styles.userInfo}>
+                    <Text style={styles.userName}>
+                        {item.username || "Unknown User"}
+                    </Text>
+                    <Text style={styles.userFullName}>
+                        {item.name || item.username || ""}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    }
+
+    if (userLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#262626" />
+                <Text style={styles.loadingText}>
+                    Loading profile...
+                </Text>
+            </View>
+        );
+    }
+
+    if (!userId) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.emptyTitle}>
+                    User ID not found
+                </Text>
+                <Text style={styles.loadingText}>
+                    Please log in again.
+                </Text>
+            </View>
+        );
+    }
+
+    if (!user) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.emptyTitle}>
+                    Profile not found
+                </Text>
+            </View>
+        );
+    }
+
+    const selectedUsers =
+        listType === "followers" ? followers : following;
+
     return (
-        <View style={styles.container}>
-            {/* Header */}
+        <SafeAreaView style={styles.container} edges={['bottom']}>
             <View style={styles.header}>
-                <Text style={styles.headerUsername}>{username}</Text>
+                <Text style={styles.headerUsername}>
+                    {user.username}
+                </Text>
 
                 <TouchableOpacity onPress={handleSettings}>
                     <Ionicons
@@ -126,17 +283,16 @@ export default function Profile({ navigation }) {
             <FlatList
                 data={posts}
                 renderItem={renderPost}
-                keyExtractor={item => item.id}
+                keyExtractor={(item) => item._id}
                 numColumns={3}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
                 ListHeaderComponent={
                     <View>
-                        {/* Profile Information */}
                         <View style={styles.profileInfo}>
                             <Image
                                 source={{
-                                    uri: 'https://i.pravatar.cc/150?img=12',
+                                    uri: `https://pub-dc9a9c6ac2a64ba48bce426ced0ac56a.r2.dev/idols/Yoona/_live/profile_1791804111876_ae796670-e03d-45b9-ad7f-7cbea5a522b5.jpg`,
                                 }}
                                 style={styles.avatar}
                             />
@@ -151,29 +307,45 @@ export default function Profile({ navigation }) {
                                     </Text>
                                 </View>
 
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statNumber}>128</Text>
+                                <TouchableOpacity
+                                    style={styles.statItem}
+                                    onPress={() =>
+                                        openUserList("followers")
+                                    }
+                                >
+                                    <Text style={styles.statNumber}>
+                                        {followers.length}
+                                    </Text>
                                     <Text style={styles.statLabel}>
                                         Followers
                                     </Text>
-                                </View>
+                                </TouchableOpacity>
 
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statNumber}>96</Text>
+                                <TouchableOpacity
+                                    style={styles.statItem}
+                                    onPress={() =>
+                                        openUserList("following")
+                                    }
+                                >
+                                    <Text style={styles.statNumber}>
+                                        {following.length}
+                                    </Text>
                                     <Text style={styles.statLabel}>
                                         Following
                                     </Text>
-                                </View>
+                                </TouchableOpacity>
                             </View>
                         </View>
 
-                        {/* Bio */}
                         <View style={styles.bioContainer}>
-                            <Text style={styles.fullName}>{fullName}</Text>
-                            <Text style={styles.bio}>{bio}</Text>
+                            <Text style={styles.fullName}>
+                                {user.name}
+                            </Text>
+                            <Text style={styles.bio}>
+                                Welcome to my profile!
+                            </Text>
                         </View>
 
-                        {/* Edit Profile Button */}
                         <View style={styles.profileButtons}>
                             <TouchableOpacity
                                 style={styles.editButton}
@@ -188,8 +360,8 @@ export default function Profile({ navigation }) {
                                 style={styles.shareButton}
                                 onPress={() =>
                                     Alert.alert(
-                                        'Share Profile',
-                                        'Profile sharing is coming soon.'
+                                        "Share Profile",
+                                        "Profile sharing is coming soon."
                                     )
                                 }
                             >
@@ -199,7 +371,6 @@ export default function Profile({ navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        {/* Posts Tab */}
                         <View style={styles.tabs}>
                             <Ionicons
                                 name="grid-outline"
@@ -208,7 +379,14 @@ export default function Profile({ navigation }) {
                             />
                         </View>
 
-                        {posts.length === 0 && (
+                        {postsLoading && (
+                            <ActivityIndicator
+                                style={{ marginTop: 15 }}
+                                color="#262626"
+                            />
+                        )}
+
+                        {!postsLoading && posts.length === 0 && (
                             <View style={styles.emptyContainer}>
                                 <Ionicons
                                     name="images-outline"
@@ -223,34 +401,81 @@ export default function Profile({ navigation }) {
                     </View>
                 }
             />
+
             <BottomNav />
-        </View>
+
+            <Modal
+                visible={listVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setListVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                {listType === "followers"
+                                    ? "Followers"
+                                    : "Following"}
+                            </Text>
+
+                            <TouchableOpacity
+                                onPress={() => setListVisible(false)}
+                            >
+                                <Ionicons
+                                    name="close"
+                                    size={26}
+                                    color="#262626"
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        {selectedUsers.length === 0 ? (
+                            <View style={styles.emptyList}>
+                                <Text style={styles.emptyListText}>
+                                    {listType === "followers"
+                                        ? "No followers yet."
+                                        : "You are not following anyone yet."}
+                                </Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={selectedUsers}
+                                renderItem={renderUser}
+                                keyExtractor={(item) => item._id}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
+                    </View>
+                </View>
+            </Modal>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 40
+        backgroundColor: "#FFFFFF",
+        paddingTop: 40,
     },
     header: {
         height: 55,
         paddingHorizontal: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
         borderBottomWidth: 0.5,
-        borderBottomColor: '#DDDDDD',
+        borderBottomColor: "#DDDDDD",
     },
     headerUsername: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#262626',
+        fontWeight: "bold",
+        color: "#262626",
     },
     profileInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 18,
         paddingTop: 20,
     },
@@ -258,25 +483,26 @@ const styles = StyleSheet.create({
         width: 82,
         height: 82,
         borderRadius: 41,
-        backgroundColor: '#EEEEEE',
+        backgroundColor: "#EEEEEE",
     },
     statistics: {
         flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
+        flexDirection: "row",
+        justifyContent: "space-around",
         marginLeft: 12,
     },
     statItem: {
-        alignItems: 'center',
+        alignItems: "center",
+        minWidth: 55,
     },
     statNumber: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#262626',
+        fontWeight: "bold",
+        color: "#262626",
     },
     statLabel: {
         fontSize: 13,
-        color: '#333333',
+        color: "#333333",
         marginTop: 4,
     },
     bioContainer: {
@@ -285,69 +511,147 @@ const styles = StyleSheet.create({
     },
     fullName: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: '#262626',
+        fontWeight: "bold",
+        color: "#262626",
     },
     bio: {
         fontSize: 14,
         lineHeight: 20,
-        color: '#262626',
+        color: "#262626",
         marginTop: 4,
     },
     profileButtons: {
-        flexDirection: 'row',
+        flexDirection: "row",
         marginHorizontal: 16,
         marginTop: 16,
         gap: 8,
     },
     editButton: {
         flex: 1,
-        backgroundColor: '#EFEFEF',
+        backgroundColor: "#EFEFEF",
         borderRadius: 7,
-        alignItems: 'center',
+        alignItems: "center",
         paddingVertical: 9,
     },
     shareButton: {
         flex: 1,
-        backgroundColor: '#EFEFEF',
+        backgroundColor: "#EFEFEF",
         borderRadius: 7,
-        alignItems: 'center',
+        alignItems: "center",
         paddingVertical: 9,
     },
     editButtonText: {
-        color: '#262626',
+        color: "#262626",
         fontSize: 13,
-        fontWeight: 'bold',
+        fontWeight: "bold",
     },
     tabs: {
         height: 48,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
         borderBottomWidth: 0.5,
-        borderBottomColor: '#DDDDDD',
+        borderBottomColor: "#DDDDDD",
         marginTop: 12,
     },
     gridItem: {
-        width: '33.3333%',
+        width: "33.3333%",
         aspectRatio: 1,
         padding: 1,
     },
     gridImage: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#EEEEEE',
+        width: "100%",
+        height: "100%",
+        backgroundColor: "#EEEEEE",
+    },
+    postPlaceholder: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#EEEEEE",
     },
     listContent: {
         paddingBottom: 15,
     },
     emptyContainer: {
-        alignItems: 'center',
+        alignItems: "center",
         padding: 30,
     },
     emptyTitle: {
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: "bold",
         marginTop: 10,
-        color: '#262626',
+        color: "#262626",
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+    },
+    loadingText: {
+        marginTop: 10,
+        color: "#666666",
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: "flex-end",
+        backgroundColor: "rgba(0, 0, 0, 0.35)",
+    },
+    modalContainer: {
+        height: "65%",
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        paddingBottom: 20,
+    },
+    modalHeader: {
+        height: 58,
+        paddingHorizontal: 18,
+        borderBottomWidth: 0.5,
+        borderBottomColor: "#DDDDDD",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    modalTitle: {
+        fontSize: 17,
+        fontWeight: "bold",
+        color: "#262626",
+    },
+    userItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 18,
+        paddingVertical: 12,
+    },
+    userAvatar: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: "#EEEEEE",
+    },
+    userInfo: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    userName: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "#262626",
+    },
+    userFullName: {
+        fontSize: 13,
+        color: "#777777",
+        marginTop: 3,
+    },
+    emptyList: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    emptyListText: {
+        fontSize: 14,
+        color: "#777777",
     },
 });

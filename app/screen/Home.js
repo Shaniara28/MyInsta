@@ -11,12 +11,10 @@ import {
     FlatList,
     Alert,
 } from 'react-native';
-
 import { Ionicons } from '@expo/vector-icons';
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import BottomNav from '../navigations/BottomNav';
 
 const GET_POSTS = gql`
@@ -94,7 +92,7 @@ export default function Home({ navigation }) {
                 <View style={styles.postHeader}>
                     <Image
                         source={{
-                            uri: 'https://i.pravatar.cc/150?img=12',
+                            uri: 'https://pub-dc9a9c6ac2a64ba48bce426ced0ac56a.r2.dev/idols/Yoona/_live/profile_1791804111876_ae796670-e03d-45b9-ad7f-7cbea5a522b5.jpg',
                         }}
                         style={styles.profileImage}
                     />
@@ -146,6 +144,7 @@ export default function Home({ navigation }) {
                         onPress={() =>
                             navigation.navigate('PostDetail', {
                                 post: item,
+                                id: item._id,
                             })
                         }
                     >
@@ -190,6 +189,7 @@ export default function Home({ navigation }) {
                 <TouchableOpacity
                     onPress={() =>
                         navigation.navigate('PostDetail', {
+                            id: item._id,
                             post: item,
                         })
                     }

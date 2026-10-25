@@ -62,8 +62,6 @@ export default function Login({ navigation }) {
 
             await signIn(token);
 
-            navigation.replace('Home');
-
         } catch (error) {
             Alert.alert(
                 'Login Failed',

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,16 +8,74 @@ import {
     TouchableOpacity,
     StyleSheet,
     FlatList,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
+
+const GET_POST_BY_ID = gql`
+    query GetPostById($id: ID!) {
+        getPostById(id: $id) {
+            _id
+            content
+            tags
+            imgUrl
+            authorId
+            author {
+                _id
+                name
+                username
+            }
+            comments {
+                content
+                username
+                createdAt
+                updatedAt
+            }
+            likes {
+                username
+                createdAt
+                updatedAt
+            }
+            likeCount
+            createdAt
+            updatedAt
+        }
+    }
+`;
 
 export default function PostDetail({ route, navigation }) {
-    const post = route.params?.post;
+    const postId = route.params?.id || route.params?.post?._id;
 
-    const [isLiked, setIsLiked] = useState(post?.isLiked || false);
-    const [likes, setLikes] = useState(post?.likes || 0);
+    const { loading, error, data } = useQuery(GET_POST_BY_ID, {
+        variables: { id: postId },
+        skip: !postId,
+    });
+
+    const post = data?.getPostById;
+
+    const [isLiked, setIsLiked] = useState(false);
+    const [likes, setLikes] = useState(0);
     const [comment, setComment] = useState('');
-    const [comments, setComments] = useState(post?.comments || []);
+    const [comments, setComments] = useState([]);
+
+    useEffect(() => {
+        if (post) {
+            setLikes(post.likeCount || 0);
+            setComments(post.comments || []);
+        }
+    }, [post]);
+
+    useEffect(() => {
+        if (error) {
+            Alert.alert(
+                'Failed to Load Post',
+                error.message || 'Something went wrong.'
+            );
+        }
+    }, [error]);
 
     function handleLike() {
         setIsLiked(!isLiked);
@@ -30,7 +88,6 @@ export default function PostDetail({ route, navigation }) {
         }
 
         const newComment = {
-            id: Date.now().toString(),
             content: comment.trim(),
             username: 'you',
             createdAt: new Date().toISOString(),
@@ -41,10 +98,23 @@ export default function PostDetail({ route, navigation }) {
         setComment('');
     }
 
+    if (loading) {
+        return (
+            <View style={styles.emptyContainer}>
+                <ActivityIndicator size="large" color="#3797EF" />
+                <Text style={styles.loadingText}>Loading post...</Text>
+            </View>
+        );
+    }
+
     if (!post) {
         return (
             <View style={styles.emptyContainer}>
-                <Text>Post not found.</Text>
+                <Text>
+                    {error
+                        ? 'Failed to load post.'
+                        : 'Post not found.'}
+                </Text>
 
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Text style={styles.backText}>Go back</Text>
@@ -58,7 +128,11 @@ export default function PostDetail({ route, navigation }) {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={26} color="#222" />
+                    <Ionicons
+                        name="arrow-back"
+                        size={26}
+                        color="#222"
+                    />
                 </TouchableOpacity>
 
                 <Text style={styles.headerTitle}>Post Detail</Text>
@@ -70,12 +144,12 @@ export default function PostDetail({ route, navigation }) {
             <FlatList
                 data={comments}
                 keyExtractor={(item, index) =>
-                    item.id || `${item.username}-${index}`
+                    `${item.username}-${item.createdAt || index}-${index}`
                 }
                 renderItem={({ item }) => (
                     <View style={styles.commentItem}>
                         <Text style={styles.commentUsername}>
-                            {item.username}{' '}
+                            {item.username || 'Unknown'}{' '}
                         </Text>
 
                         <Text style={styles.commentContent}>
@@ -89,26 +163,32 @@ export default function PostDetail({ route, navigation }) {
                         <View style={styles.userInfo}>
                             <Image
                                 source={{
-                                    uri:
-                                        post.profileImage ||
-                                        'https://i.pravatar.cc/150?img=12',
+                                    uri: 'https://i.pravatar.cc/150?img=12',
                                 }}
                                 style={styles.profileImage}
                             />
 
-                            <Text style={styles.username}>
-                                {post.username || 'Unknown user'}
-                            </Text>
+                            <View>
+                                <Text style={styles.username}>
+                                    {post.author?.username || 'Unknown user'}
+                                </Text>
+
+                                {post.author?.name ? (
+                                    <Text style={styles.authorName}>
+                                        {post.author.name}
+                                    </Text>
+                                ) : null}
+                            </View>
                         </View>
 
                         {/* Post Image */}
-                        <Image
-                            source={{
-                                uri: post.postImage || post.imgUrl,
-                            }}
-                            style={styles.postImage}
-                            resizeMode="cover"
-                        />
+                        {post.imgUrl ? (
+                            <Image
+                                source={{ uri: post.imgUrl }}
+                                style={styles.postImage}
+                                resizeMode="cover"
+                            />
+                        ) : null}
 
                         {/* Actions */}
                         <View style={styles.actions}>
@@ -126,7 +206,9 @@ export default function PostDetail({ route, navigation }) {
 
                             <TouchableOpacity
                                 style={styles.actionIcon}
-                                onPress={() => { }}
+                                onPress={() => {
+                                    // Focus input komentar
+                                }}
                             >
                                 <Ionicons
                                     name="chatbubble-outline"
@@ -152,13 +234,22 @@ export default function PostDetail({ route, navigation }) {
                         {/* Caption */}
                         <View style={styles.captionContainer}>
                             <Text style={styles.username}>
-                                {post.username || 'Unknown user'}{' '}
+                                {post.author?.username || 'Unknown user'}{' '}
                             </Text>
 
                             <Text style={styles.caption}>
-                                {post.caption || post.content || ''}
+                                {post.content || ''}
                             </Text>
                         </View>
+
+                        {/* Tags */}
+                        {post.tags?.length > 0 && (
+                            <Text style={styles.tags}>
+                                {post.tags
+                                    .map((tag) => `#${tag}`)
+                                    .join(' ')}
+                            </Text>
+                        )}
 
                         {/* Comments Title */}
                         <View style={styles.divider} />
@@ -212,7 +303,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
-        paddingVertical: 40
+        paddingTop: 40,
     },
     header: {
         height: 55,
@@ -232,7 +323,7 @@ const styles = StyleSheet.create({
         width: 26,
     },
     userInfo: {
-        height: 55,
+        minHeight: 55,
         paddingHorizontal: 14,
         flexDirection: 'row',
         alignItems: 'center',
@@ -246,6 +337,11 @@ const styles = StyleSheet.create({
     username: {
         fontWeight: 'bold',
         color: '#262626',
+    },
+    authorName: {
+        color: '#777777',
+        fontSize: 12,
+        marginTop: 2,
     },
     postImage: {
         width: '100%',
@@ -272,11 +368,16 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         marginHorizontal: 14,
         marginTop: 8,
-        marginBottom: 16,
+        marginBottom: 12,
     },
     caption: {
         color: '#262626',
         flexShrink: 1,
+    },
+    tags: {
+        color: '#3797EF',
+        marginHorizontal: 14,
+        marginBottom: 16,
     },
     divider: {
         height: 0.5,
@@ -341,6 +442,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+    loadingText: {
+        marginTop: 10,
+        color: '#777777',
     },
     backText: {
         color: '#0095F6',
