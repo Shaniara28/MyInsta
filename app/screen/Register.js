@@ -11,6 +11,19 @@ import {
     Alert,
     ScrollView,
 } from 'react-native';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
+
+const REGISTER = gql`
+    mutation Register($name: String, $username: String!, $email: String!, $password: String!) {
+        register(name: $name, username: $username, email: $email, password: $password) {
+            _id
+            name
+            username
+            email
+        }
+    }
+`;
 
 export default function Register({ navigation }) {
     const [name, setName] = useState('');
@@ -19,32 +32,61 @@ export default function Register({ navigation }) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    function handleRegister() {
-        if (!name || !username || !email || !password || !confirmPassword) {
-            Alert.alert('Oops!', 'All field is required.');
+    const [register, { loading }] = useMutation(REGISTER);
+
+    async function handleRegister() {
+        if (
+            !name.trim() ||
+            !username.trim() ||
+            !email.trim() ||
+            !password ||
+            !confirmPassword
+        ) {
+            Alert.alert('Oops!', 'All fields are required.');
             return;
         }
 
         if (password.length < 5) {
-            Alert.alert('Oops!', 'Password must be at least 5 characters long.');
+            Alert.alert(
+                'Oops!',
+                'Password must be at least 5 characters long.'
+            );
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Oops!', 'Password do not match.');
+            Alert.alert('Oops!', 'Passwords do not match.');
             return;
         }
 
-        Alert.alert(
-            'Register Success!',
-            'Your account has been created successfully. Please log in.',
-            [
-                {
-                    text: 'OK',
-                    onPress: () => navigation.navigate('Login'),
+        try {
+            const { data } = await register({
+                variables: {
+                    name: name.trim(),
+                    username: username.trim(),
+                    email: email.trim(),
+                    password,
                 },
-            ]
-        );
+            });
+
+            if (data?.register) {
+                Alert.alert(
+                    'Register Success!',
+                    'Your account has been created successfully. Please log in.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => navigation.navigate('Login'),
+                        },
+                    ]
+                );
+            }
+        } catch (error) {
+            Alert.alert(
+                'Register Failed',
+                error.message || 'Something went wrong.'
+            );
+        }
     }
 
     return (
@@ -113,9 +155,10 @@ export default function Register({ navigation }) {
                     <TouchableOpacity
                         style={styles.registerButton}
                         onPress={handleRegister}
+                        disabled={loading}
                     >
                         <Text style={styles.registerButtonText}>
-                            Sign Up
+                            {loading ? 'Signing Up...' : 'Sign Up'}
                         </Text>
                     </TouchableOpacity>
 
