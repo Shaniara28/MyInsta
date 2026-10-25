@@ -68,10 +68,9 @@ export default function Search({ navigation }) {
                 style={styles.userItem}
                 activeOpacity={0.7}
                 onPress={() => {
-                    Alert.alert(
-                        item.name || item.username,
-                        `Username: @${item.username}`
-                    );
+                    navigation.navigate("OtherUserProfile", {
+                        userId: item._id,
+                    });
                 }}
             >
                 <Image
@@ -83,7 +82,7 @@ export default function Search({ navigation }) {
 
                 <View style={styles.userInfo}>
                     <Text style={styles.username}>
-                        {item.username}
+                        @{item.username}
                     </Text>
 
                     <Text style={styles.fullName}>

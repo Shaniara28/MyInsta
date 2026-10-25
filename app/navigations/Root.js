@@ -11,6 +11,7 @@ import Login from '../screen/Login';
 import CreatePost from '../screen/CreatePost';
 import Seacrh from '../screen/Search';
 import Profile from '../screen/Profile';
+import OtherUserProfile from '../screen/OtherUserProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +66,11 @@ export default function RootStack() {
                     <Stack.Screen
                         name="Profile"
                         component={Profile}
+                        options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                        name="OtherUserProfile"
+                        component={OtherUserProfile}
                         options={{ headerShown: false }}
                     />
                 </>
